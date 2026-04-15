@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHA Integrity Analyzer</title>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Background Gradient */
+            --bg-1: #0f172a;
+            --bg-2: #1e293b;
+            
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            
+            /* Text Colors */
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            /* Accents */
+            --blue: #3b82f6;
+            --red: #ef4444;
+            --green: #10b981;
+            
+            --transition-smooth: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .header svg { color: var(--blue); width: 32px; height: 32px; }
+        .header p { color: var(--text-secondary); font-size: 0.95rem; margin-top: 6px; }
+
+        /* Card Container */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--glass-shadow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Input Form */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+        textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: monospace;
+            resize: vertical;
+            transition: var(--transition-smooth);
+            outline: none;
+        }
+        textarea:focus {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            user-select: none;
+        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn svg { width: 16px; height: 16px; }
+
+        .btn-blue { background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%); }
+        .btn-gray { background: linear-gradient(180deg, #64748b 0%, #475569 100%); }
+        .btn-blue:hover:not(:disabled), .btn-gray:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.03);
+            filter: brightness(1.1);
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.75em;
+            display: flex; gap: 4px; align-items: center;
+        }
+        .icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.1); }
+
+        /* Output Hash Cards */
+        .hash-card {
+            background: rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .hash-card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .tooltip {
+            font-size: 0.7rem;
+            color: var(--blue);
+            cursor: help;
+            border: 1px solid var(--blue);
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+
+        .hash-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .hash-row span {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .hash-value {
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            background: rgba(255,255,255,0.02);
+            padding: 8px;
+            border-radius: 6px;
+            min-height: 38px;
+            color: var(--text-primary);
+        }
+        
+        .diff-stats {
+            font-size: 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* Avalanche Explanation Box */
+        .explanation {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        .explanation strong {
+            color: var(--blue);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; bottom: 24px; right: 24px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 1000;
+        }
+        .toast {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white; padding: 12px 20px; border-radius: 8px;
+            font-size: 0.9rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s forwards;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+            .btn-row { justify-content: stretch; }
+            .btn { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        
+        <div class="header">
+            <h1>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                SHA Integrity Analyzer
+            </h1>
+            <p>Compare cryptographic hash outputs to visualize the Avalanche Effect.</p>
+        </div>
+
+        <!-- Inputs Section -->
+        <div class="card">
+            <div class="card-header" style="margin-bottom:8px;">
+                <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    1. Input Datasets
+                </div>
+                <button class="icon-btn" onclick="autoModify()" title="Automatically copies original msg and changes a single character">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Auto Modify
+                </button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Original Message</label>
+                    <textarea id="inputOg" rows="4" placeholder="Enter base text..." spellcheck="false"></textarea>
+                </div>
+                <div class="input-group">
+                    <label>Modified Message</label>
+                    <textarea id="inputMod" rows="4" placeholder="Enter slightly modified base text..." spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-blue" id="btnAnalyze" onclick="analyzeHashes()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    Analyze Hashes
+                </button>
+                <button class="btn btn-gray" onclick="clearAll()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Output & Comparison -->
+        <div class="card" id="outputCard" style="display:none;">
+            <div class="card-header">
+                <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                    2. Cryptographic Output &amp; Analysis
+                </div>
+                <button class="icon-btn" onclick="exportResults()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Export
+                </button>
+            </div>
+
+            <div class="explanation">
+                <strong>The Avalanche Effect:</strong> Notice below how changing even a single character in the 'Modified Message' causes a cascading failure across the cryptographic permutations. The output hash completely diverges, demonstrating the core principle of SHA data integrity.
+            </div>
+
+            <!-- SHA-1 Display -->
+            <div class="hash-card" id="cardSha1">
+                <div class="hash-card-title">
+                    SHA-1 (160-bit)
+                    <span class="tooltip" title="Historical algorithm, largely deprecated for security due to collision vulnerabilities but still good for basic checksums.">Info</span>
+                </div>
+                <div class="hash-row">
+                    <span>Original Hash</span>
+                    <div class="hash-value" id="ogSha1"></div>
+                </div>
+                <div class="hash-row">
+                    <span>Modified Hash <span id="statSha1"></span></span>
+                    <div class="hash-value" id="modSha1"></div>
+                </div>
+            </div>
+
+            <!-- SHA-256 Display -->
+            <div class="hash-card" id="cardSha256">
+                <div class="hash-card-title">
+                    SHA-256 (256-bit)
+                    <span class="tooltip" title="Current industry standard. Provides excellent security and powers Bitcoin, SSL certificates, etc.">Info</span>
+                </div>
+                <div class="hash-row">
+                    <span>Original Hash</span>
+                    <div class="hash-value" id="ogSha256"></div>
+                </div>
+                <div class="hash-row">
+                    <span>Modified Hash <span id="statSha256"></span></span>
+                    <div class="hash-value" id="modSha256"></div>
+                </div>
+            </div>
+
+            <!-- SHA-512 Display -->
+            <div class="hash-card" id="cardSha512">
+                <div class="hash-card-title">
+                    SHA-512 (512-bit)
+                    <span class="tooltip" title="Highly secure variant using 64-bit words. Extremely resistant to collisions and brute force attacks.">Info</span>
+                </div>
+                <div class="hash-row">
+                    <span>Original Hash</span>
+                    <div class="hash-value" id="ogSha512"></div>
+                </div>
+                <div class="hash-row">
+                    <span>Modified Hash <span id="statSha512"></span></span>
+                    <div class="hash-value" id="modSha512"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Navigation -->
+        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+            <button class="btn btn-gray" onclick="window.location.href='ala1.html'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                Prev: ALA 1
+            </button>
+            <button class="btn btn-blue" onclick="window.location.href='ala3.html'">
+                Next: ALA 3
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Store hex values for export
+        const resultsData = {
+            ogText: '', modText: '',
+            og1: '', mod1: '',
+            og256: '', mod256: '',
+            og512: '', mod512: ''
+        };
+
+        // --- Core WebCrypto Digest Logic ---
+        async function computeHash(algo, text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await window.crypto.subtle.digest(algo, data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // --- Diffing / Avalanche Highlighting ---
+        function generateDiffHtml(ogHash, modHash) {
+            if (!ogHash || !modHash || ogHash.length !== modHash.length) {
+                return { html: modHash, mutations: 0, percent: 0 };
+            }
+            
+            let html = '';
+            let mutations = 0;
+            
+            for (let i = 0; i < modHash.length; i++) {
+                if (ogHash[i] === modHash[i]) {
+                    // Match - fade out
+                    html += `<span style="opacity: 0.3">${modHash[i]}</span>`;
+                } else {
+                    // Difference - bold red
+                    html += `<span style="color: var(--red); font-weight: bold; text-shadow: 0 0 5px rgba(239,68,68,0.5);">${modHash[i]}</span>`;
+                    mutations++;
+                }
+            }
+            
+            const percent = Math.round((mutations / modHash.length) * 100);
+            return { html, mutations, percent };
+        }
+
+        // --- UI Interactions ---
+
+        async function analyzeHashes() {
+            const ogText = document.getElementById('inputOg').value;
+            const modText = document.getElementById('inputMod').value;
+
+            if (!ogText && !modText) {
+                showToast("Please enter at least one message!");
+                return;
+            }
+
+            const btn = document.getElementById('btnAnalyze');
+            btn.disabled = true;
+            btn.innerHTML = "Computing...";
+
+            try {
+                // Determine Hashes
+                const og1 = ogText ? await computeHash('SHA-1', ogText) : 'N/A';
+                const mod1 = modText ? await computeHash('SHA-1', modText) : 'N/A';
+                
+                const og256 = ogText ? await computeHash('SHA-256', ogText) : 'N/A';
+                const mod256 = modText ? await computeHash('SHA-256', modText) : 'N/A';
+                
+                const og512 = ogText ? await computeHash('SHA-512', ogText) : 'N/A';
+                const mod512 = modText ? await computeHash('SHA-512', modText) : 'N/A';
+
+                // Save for export
+                resultsData.ogText = ogText; resultsData.modText = modText;
+                resultsData.og1 = og1; resultsData.mod1 = mod1;
+                resultsData.og256 = og256; resultsData.mod256 = mod256;
+                resultsData.og512 = og512; resultsData.mod512 = mod512;
+
+                // Process DOM Elements
+                document.getElementById('outputCard').style.display = 'block';
+                
+                function applyDisplay(algoId, ogHash, modHash) {
+                    const diff = generateDiffHtml(ogHash, modHash);
+                    document.getElementById('og'+algoId).textContent = ogHash;
+                    document.getElementById('mod'+algoId).innerHTML = diff.html;
+                    
+                    const statElement = document.getElementById('stat'+algoId);
+                    if (ogText && modText && ogText !== modText) {
+                        statElement.innerHTML = `<span class="diff-stats">${diff.percent}% Changed (${diff.mutations} hex chars)</span>`;
+                    } else {
+                        statElement.innerHTML = '';
+                    }
+
+                    // Stagger animation
+                    const card = document.getElementById('card'+algoId);
+                    card.style.display = 'none';
+                    setTimeout(() => { card.style.display = 'block'; }, 100);
+                }
+
+                applyDisplay('Sha1', og1, mod1);
+                applyDisplay('Sha256', og256, mod256);
+                applyDisplay('Sha512', og512, mod512);
+
+                showToast("Analysis Complete!");
+
+            } catch (err) {
+                console.error(err);
+                showToast("An error occurred during hashing.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Analyze Hashes`;
+            }
+        }
+
+        // Auto Modify bonus feature (modifies string safely by just appending a period)
+        function autoModify() {
+            const og = document.getElementById('inputOg').value;
+            if (!og) {
+                document.getElementById('inputOg').value = "Integrity guarantees security.";
+                document.getElementById('inputMod').value = "Integrity guarantees security!";
+            } else {
+                document.getElementById('inputMod').value = og + ".";
+            }
+            showToast("Copied & Modified.");
+            analyzeHashes();
+        }
+
+        function clearAll() {
+            document.getElementById('inputOg').value = '';
+            document.getElementById('inputMod').value = '';
+            document.getElementById('outputCard').style.display = 'none';
+            document.getElementById('cardSha1').style.display = 'none';
+            document.getElementById('cardSha256').style.display = 'none';
+            document.getElementById('cardSha512').style.display = 'none';
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function exportResults() {
+            const tx = `SHA INTEGRITY REPORT\n\n` +
+                       `Original Message: ${resultsData.ogText}\n` +
+                       `Modified Message: ${resultsData.modText}\n\n` +
+                       `SHA-1\nOriginal Hash: ${resultsData.og1}\nModified Hash: ${resultsData.mod1}\n\n` +
+                       `SHA-256\nOriginal Hash: ${resultsData.og256}\nModified Hash: ${resultsData.mod256}\n\n` +
+                       `SHA-512\nOriginal Hash: ${resultsData.og512}\nModified Hash: ${resultsData.mod512}\n`;
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(tx));
+            element.setAttribute('download', 'sha_integrity_report.txt');
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            showToast("Report exported.");
+        }
+    </script>
+</body>
+</html>
